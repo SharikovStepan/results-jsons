@@ -3,7 +3,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-    -'results.jsons/**'
+    - 'results.jsons/**'
   workflow_dispatch:
 
 permissions:  # Важно! Даёт права на запись
