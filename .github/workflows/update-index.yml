@@ -2,6 +2,8 @@ name: Update JSON Index
 on:
   push:
     branches: [ "main" ]
+    paths:
+    -'results.jsons/**'
   workflow_dispatch:
 
 permissions:  # Важно! Даёт права на запись
