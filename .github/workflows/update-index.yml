@@ -1,0 +1,24 @@
+name: Update JSON Index
+on:
+  push:
+    branches: [ "main" ]  # Запускается при изменении в ветке main
+  workflow_dispatch:      # Позволяет запустить вручную
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4  # Клонирует репозиторий
+      - name: Generate files.json
+        run: |
+          # Получаем список JSON-файлов из папки results.jsons
+          echo '{"files": [' > files.json
+          ls results.jsons/*.json | sed 's/results.jsons\//"/;s/$/"/' | paste -sd ',' >> files.json
+          echo ']}' >> files.json
+      - name: Commit and push
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add files.json
+          git commit -m "Update files.json"
+          git push
