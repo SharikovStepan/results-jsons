@@ -1,7 +1,8 @@
 name: Telegram JSON File Processor
 
 on:
-  workflow_dispatch:
+  repository_dispatch:
+    types: [telegram_file]
 
 jobs:
   process_file:
