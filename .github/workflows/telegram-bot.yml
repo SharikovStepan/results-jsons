@@ -14,7 +14,7 @@ jobs:
         run: |
           # Лимит: не чаще 1 раза в 10 секунд и не больше 30 запусков в час
           MIN_INTERVAL=10  # Секунд между запусками
-          MAX_RUNS_PER_HOUR=30  # Максимум запусков в час
+          MAX_RUNS_PER_HOUR=60  # Максимум запусков в час
 
           # Получаем время последнего успешного запуска
           LAST_RUN=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
