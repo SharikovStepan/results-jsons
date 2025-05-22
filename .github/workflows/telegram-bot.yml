@@ -8,6 +8,40 @@ jobs:
   process_file:
     runs-on: ubuntu-latest
     steps:
+      # 1. Проверка лимита запусков (ставим ПЕРВЫМ шагом)
+      - name: Проверить частоту запросов
+        id: rate_limit
+        run: |
+          # Лимит: не чаще 1 раза в 10 секунд и не больше 30 запусков в час
+          MIN_INTERVAL=10  # Секунд между запусками
+          MAX_RUNS_PER_HOUR=30  # Максимум запусков в час
+
+          # Получаем время последнего успешного запуска
+          LAST_RUN=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?event=repository_dispatch&status=success" \
+            | jq -r '.workflow_runs[0].created_at')
+
+          # Если запуски были
+          if [ "$LAST_RUN" != "null" ]; then
+            LAST_RUN_TIME=$(date -d "$LAST_RUN" +%s)
+            CURRENT_TIME=$(date +%s)
+            DIFF=$((CURRENT_TIME - LAST_RUN_TIME))
+
+            if [ "$DIFF" -lt $MIN_INTERVAL ]; then
+              echo "❌ Слишком часто! Подождите $((MIN_INTERVAL - DIFF)) секунд."
+              exit 1
+            fi
+          fi
+
+          # Проверяем количество запусков за последний час
+          RUNS_LAST_HOUR=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?created_at=$(date -u -d '1 hour ago' +'%Y-%m-%dT%H:%M:%SZ')" \
+            | jq '.total_count')
+
+          if [ "$RUNS_LAST_HOUR" -ge $MAX_RUNS_PER_HOUR ]; then
+            echo "❌ Лимит: $MAX_RUNS_PER_HOUR запусков в час. Превышен!"
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
