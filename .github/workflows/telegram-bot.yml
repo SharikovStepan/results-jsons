@@ -35,7 +35,7 @@ jobs:
 
           # Проверяем количество запусков за последний час
           RUNS_LAST_HOUR=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs?created_at=$(date -u -d '1 hour ago' +'%Y-%m-%dT%H:%M:%SZ')" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?created_at=$(date -u -d '1 hour ago' +'%Y-%m-%dT%H:%M:%SZ')&event=repository_dispatch" \
             | jq '.total_count')
 
           if [ "$RUNS_LAST_HOUR" -ge $MAX_RUNS_PER_HOUR ]; then
