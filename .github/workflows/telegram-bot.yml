@@ -22,8 +22,10 @@ jobs:
           RAW_CONTENT='${{ toJson(github.event.client_payload.file_content) }}'
           CLEAN_CONTENT=$(echo "$RAW_CONTENT" | sed 's/\\"/"/g' | sed 's/^"\|"$//g')
           
-          # Извлекаем метаданные
+          # Извлекаем метаданные и обрабатываем caption
           CAPTION=$(echo "$CLEAN_CONTENT" | jq -r '.message.caption // "file"')
+          # Заменяем пробелы, "_" и "." на "-"
+          PROCESSED_CAPTION=$(echo "$CAPTION" | sed -e 's/[ _.]/-/g')
           FILE_ID=$(echo "$CLEAN_CONTENT" | jq -r '.message.document.file_id')
           ORIG_NAME=$(echo "$CLEAN_CONTENT" | jq -r '.message.document.file_name')
 
@@ -55,8 +57,8 @@ jobs:
             fi
           fi
 
-          # Формируем имя файла
-          NEW_FILENAME="${CAPTION}_${DATETIME}.json"
+          # Формируем имя файла с обработанным caption
+          NEW_FILENAME="${PROCESSED_CAPTION}_${DATETIME}.json"
           
           # Сохраняем файл
           mkdir -p results.jsons
