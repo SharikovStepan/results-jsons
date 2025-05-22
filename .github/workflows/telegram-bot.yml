@@ -15,24 +15,35 @@ jobs:
       - name: Process incoming file
         id: process_file
         run: |
-          # Получаем чистый JSON без двойного экранирования
-          FILE_CONTENT='${{ toJson(github.event.client_payload.file_content) }}'
-          echo "Raw content: $FILE_CONTENT"
+          # Получаем и нормализуем JSON
+          RAW_CONTENT='${{ toJson(github.event.client_payload.file_content) }}'
+          echo "Normalized content: $RAW_CONTENT"
           
-          # Парсим данные (используем jq с флагом -r для raw-вывода)
-          FILE_NAME=$(echo "$FILE_CONTENT" | jq -r '.message.document.file_name')
-          CAPTION=$(echo "$FILE_CONTENT" | jq -r '.message.caption // "uploaded"')
-          FILE_ID=$(echo "$FILE_CONTENT" | jq -r '.message.document.file_id')
+          # Удаляем лишние экранирования (2 замены)
+          CLEAN_CONTENT=$(echo "$RAW_CONTENT" | sed 's/\\"/"/g' | sed 's/^"\|"$//g')
+          echo "Cleaned content: $CLEAN_CONTENT"
           
-          # Скачиваем файл напрямую из Telegram
-          FILE_URL="https://api.telegram.org/file/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/$FILE_ID"
-          curl -s -o "$FILE_NAME" "$FILE_URL"
+          # Парсим данные
+          FILE_NAME=$(echo "$CLEAN_CONTENT" | jq -r '.message.document.file_name')
+          CAPTION=$(echo "$CLEAN_CONTENT" | jq -r '.message.caption // "uploaded"')
+          FILE_ID=$(echo "$CLEAN_CONTENT" | jq -r '.message.document.file_id')
           
-          # Генерируем новое имя файла
+          echo "File name: $FILE_NAME"
+          echo "Caption: $CAPTION"
+          echo "File ID: $FILE_ID"
+
+          # Получаем путь к файлу
+          FILE_PATH=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getFile?file_id=$FILE_ID" | jq -r '.result.file_path')
+          echo "File path: $FILE_PATH"
+          
+          # Скачиваем файл
+          curl -s -o "$FILE_NAME" "https://api.telegram.org/file/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/$FILE_PATH"
+          
+          # Создаем новое имя файла
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
           NEW_FILENAME="${CAPTION}_${TIMESTAMP}.json"
           
-          # Сохраняем файл
+          # Сохраняем в репозиторий
           mkdir -p results.jsons
           mv "$FILE_NAME" "results.jsons/$NEW_FILENAME"
           
@@ -54,6 +65,6 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           message: |
-            Файл успешно сохранён!
+            ✅ Файл успешно сохранён!
             Имя: ${{ steps.process_file.outputs.FILE_NAME }}
-            Путь: ${{ steps.process_file.outputs.FILE_PATH }}
+            Размер: $(stat -c%s "results.jsons/${{ steps.process_file.outputs.FILE_NAME }}") байт
