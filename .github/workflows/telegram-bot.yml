@@ -108,5 +108,6 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           message: |
             📥 Новый файл обработан:
-            Отправитель: ${{ steps.process_file.outputs.USER_NAME }}
+            Отправитель: ${@{ steps.process_file.outputs.USER_NAME }}
+            ${" "}
             ${{ steps.process_file.outputs.MESSAGE }}
