@@ -11,7 +11,8 @@ async function handleRequest(request) {
       method: 'POST',
       headers: {
         'Authorization': 'token ${{ secrets.GH_TOKEN }}',
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent':'telegram-bot'
       },
       body: JSON.stringify({
         event_type: 'telegram_file',
