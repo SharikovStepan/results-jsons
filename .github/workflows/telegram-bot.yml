@@ -2,58 +2,58 @@ name: Telegram JSON Processor
 
 on:
   repository_dispatch:
-    types: [telegram_file]  # Триггер при вызове через API
+    types: [telegram_file]
 
 jobs:
   process_file:
     runs-on: ubuntu-latest
     steps:
-      # Шаг 1: Получаем код репозитория
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
-          fetch-depth: 0
 
-      # Шаг 2: Извлекаем данные из вебхука
-      - name: Extract file data
-        id: extract_data
+      - name: Process incoming file
+        id: process_file
         run: |
-          # Парсим JSON из события
+          # Получаем чистый JSON без двойного экранирования
           FILE_CONTENT='${{ toJson(github.event.client_payload.file_content) }}'
+          echo "Raw content: $FILE_CONTENT"
+          
+          # Парсим данные (используем jq с флагом -r для raw-вывода)
           FILE_NAME=$(echo "$FILE_CONTENT" | jq -r '.message.document.file_name')
           CAPTION=$(echo "$FILE_CONTENT" | jq -r '.message.caption // "uploaded"')
-
-          # Генерируем уникальное имя файла
+          FILE_ID=$(echo "$FILE_CONTENT" | jq -r '.message.document.file_id')
+          
+          # Скачиваем файл напрямую из Telegram
+          FILE_URL="https://api.telegram.org/file/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/$FILE_ID"
+          curl -s -o "$FILE_NAME" "$FILE_URL"
+          
+          # Генерируем новое имя файла
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
           NEW_FILENAME="${CAPTION}_${TIMESTAMP}.json"
-
-          # Сохраняем переменные для следующих шагов
-          echo "FILE_NAME=$NEW_FILENAME" >> $GITHUB_OUTPUT
-          echo "FILE_CONTENT=$FILE_CONTENT" >> $GITHUB_OUTPUT
-
-      # Шаг 3: Сохраняем файл
-      - name: Save JSON file
-        run: |
+          
+          # Сохраняем файл
           mkdir -p results.jsons
-          echo '${{ steps.extract_data.outputs.FILE_CONTENT }}' > "results.jsons/${{ steps.extract_data.outputs.FILE_NAME }}"
-          echo "Файл сохранён: results.jsons/${{ steps.extract_data.outputs.FILE_NAME }}"
+          mv "$FILE_NAME" "results.jsons/$NEW_FILENAME"
+          
+          # Передаем данные между шагами
+          echo "FILE_NAME=$NEW_FILENAME" >> $GITHUB_OUTPUT
+          echo "FILE_PATH=results.jsons/$NEW_FILENAME" >> $GITHUB_OUTPUT
 
-      # Шаг 4: Пушим изменения
       - name: Commit and push
         run: |
           git config --global user.name "Telegram Bot"
           git config --global user.email "bot@github.com"
           git add .
-          git commit -m "Add ${{ steps.extract_data.outputs.FILE_NAME }}"
+          git commit -m "Add ${{ steps.process_file.outputs.FILE_NAME }}"
           git push
 
-      # Шаг 5: Уведомление в Telegram
-      - name: Send confirmation
+      - name: Notify user
         uses: appleboy/telegram-action@master
         with:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           message: |
-            ✅ Файл успешно сохранён!
-            Имя: ${{ steps.extract_data.outputs.FILE_NAME }}
-            Репозиторий: https://github.com/${{ github.repository }}/tree/main/results.jsons
+            Файл успешно сохранён!
+            Имя: ${{ steps.process_file.outputs.FILE_NAME }}
+            Путь: ${{ steps.process_file.outputs.FILE_PATH }}
