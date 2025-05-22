@@ -33,6 +33,10 @@ jobs:
           FILE_PATH=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getFile?file_id=$FILE_ID" | jq -r '.result.file_path')
           curl -s -o "temp.json" "https://api.telegram.org/file/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/$FILE_PATH"
 
+          # Извлекаем chat_id отправителя
+          CHAT_ID=$(echo "$CLEAN_CONTENT" | jq -r '.message.chat.id')
+
+
           # Пытаемся извлечь дату из содержимого JSON
           JSON_DATETIME=$(jq -r '
             [.heats | to_entries[] | 
@@ -72,6 +76,7 @@ jobs:
           echo "Источник даты: $DATETIME_SOURCE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+          echo "CHAT_ID=$CHAT_ID" >> $GITHUB_OUTPUT
           echo "FILE_NAME=$NEW_FILENAME" >> $GITHUB_OUTPUT
           echo "FILE_PATH=results.jsons/$NEW_FILENAME" >> $GITHUB_OUTPUT
 
@@ -86,6 +91,19 @@ jobs:
       - name: Notify user
         uses: appleboy/telegram-action@master
         with:
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          message: ${{ steps.process_file.outputs.MESSAGE }}
+           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+           to: ${{ steps.process_file.outputs.CHAT_ID }}  # Используем chat_id отправителя вместо secrets.TELEGRAM_CHAT_ID
+           message: ${{ steps.process_file.outputs.MESSAGE }}
+
+
+
+      - name: Notify admin
+        if: ${{ steps.process_file.outputs.CHAT_ID != secrets.TELEGRAM_CHAT_ID }}  # Чтобы не дублировать сообщение
+        uses: appleboy/telegram-action@master
+        with:
+           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+           to: ${{ secrets.TELEGRAM_CHAT_ID }}
+           message: |
+            📥 Новый файл обработан:
+             Отправитель: ${{ steps.process_file.outputs.CHAT_ID }}
+             ${{ steps.process_file.outputs.MESSAGE }}
