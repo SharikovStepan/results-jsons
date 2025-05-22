@@ -7,7 +7,7 @@ async function handleRequest(request) {
     const data = await request.json()
     
     // Отправляем данные в GitHub Actions
-    await fetch(`https://api.github.com/repos/<ВАШ_НИК>/<РЕПОЗИТОРИЙ>/dispatches`, {
+    await fetch(`https://api.github.com/repos/SharikovStepan/results-jsons/dispatches`, {
       method: 'POST',
       headers: {
         'Authorization': 'token ${{ secrets.GH_TOKEN }}',
