@@ -36,6 +36,9 @@ jobs:
           # Извлекаем chat_id отправителя
           CHAT_ID=$(echo "$CLEAN_CONTENT" | jq -r '.message.chat.id')
 
+          # Извлекаем имя пользователя
+          USER_NAME=$(echo "$CLEAN_CONTENT" | jq -r '.message.chat.username')
+
           # Пытаемся извлечь дату из содержимого JSON
           JSON_DATETIME=$(jq -r '
             [.heats | to_entries[] | 
@@ -76,6 +79,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
           echo "CHAT_ID=$CHAT_ID" >> $GITHUB_OUTPUT
+          echo "USER_NAME=$USER_NAME" >> $GITHUB_OUTPUT
           echo "FILE_NAME=$NEW_FILENAME" >> $GITHUB_OUTPUT
           echo "FILE_PATH=results.jsons/$NEW_FILENAME" >> $GITHUB_OUTPUT
 
@@ -104,5 +108,5 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           message: |
             📥 Новый файл обработан:
-            Отправитель: ${{ steps.process_file.outputs.CHAT_ID }}
+            Отправитель: ${{ steps.process_file.outputs.USER_NAME }}
             ${{ steps.process_file.outputs.MESSAGE }}
