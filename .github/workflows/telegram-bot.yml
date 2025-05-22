@@ -30,12 +30,12 @@ jobs:
           API_RESPONSE=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getFile?file_id=$FILE_ID")
           FILE_PATH=$(echo "$API_RESPONSE" | jq -r '.result.file_path')
 
-echo "Полученные данные:"
-echo "FILE_ID: $FILE_ID"
-echo "FILE_NAME: $FILE_NAME"
-echo "CAPTION: $CAPTION"
-echo "Полный ответ getFile:"
-curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getFile?file_id=$FILE_ID" | jq
+          echo "Полученные данные:"
+          echo "FILE_ID: $FILE_ID"
+          echo "FILE_NAME: $FILE_NAME"
+          echo "CAPTION: $CAPTION"
+          echo "Полный ответ getFile:"
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getFile?file_id=$FILE_ID" | jq
 
 
 
