@@ -1,33 +1,32 @@
-- name: Fetch and process file
-  run: |
-    TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
-    
-    # Получаем последнее сообщение с файлом
-    RESPONSE=$(curl -s "https://api.telegram.org/bot$TOKEN/getUpdates")
-    echo "Debug - полный ответ:"
-    echo "$RESPONSE" | jq .
+name: Telegram Auto-Processor
 
-    FILE_ID=$(echo "$RESPONSE" | jq -r '.result[-1].message.document.file_id')
-    FILE_NAME=$(echo "$RESPONSE" | jq -r '.result[-1].message.document.file_name')
-    CAPTION=$(echo "$RESPONSE" | jq -r '.result[-1].message.caption // "file"')
+on:
+  repository_dispatch:
+    types: [telegram_file]
 
-    echo "FILE_ID: $FILE_ID"
-    echo "FILE_NAME: $FILE_NAME"
-    echo "CAPTION: $CAPTION"
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
 
-    if [ "$FILE_ID" = "null" ]; then
-      echo "Ошибка: Файл не найден в последних сообщениях"
-      exit 1
-    fi
+      - name: Process file
+        env:
+          EVENT_DATA: ${{ toJson(github.event.client_payload) }}
+        run: |
+          # Устанавливаем jq
+          sudo apt-get install -y jq
 
-    # Получаем file_path
-    FILE_PATH=$(curl -s "https://api.telegram.org/bot$TOKEN/getFile?file_id=$FILE_ID" | jq -r '.result.file_path')
-    if [ "$FILE_PATH" = "null" ]; then
-      echo "Ошибка при получении file_path:"
-      curl -s "https://api.telegram.org/bot$TOKEN/getFile?file_id=$FILE_ID" | jq .
-      exit 1
-    fi
+          # Извлекаем данные
+          FILENAME=$(echo "$EVENT_DATA" | jq -r '.file_name')
+          CONTENT=$(echo "$EVENT_DATA" | jq -r '.file_content | fromjson')
 
-    # Скачиваем файл
-    curl -o "$FILE_NAME" "https://api.telegram.org/file/bot$TOKEN/$FILE_PATH"
-    echo "Файл скачан: $(ls -l "$FILE_NAME")"
+          # Форматируем имя файла: подпись_дата.json
+          DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
+          NEW_FILENAME="${FILENAME%.*}_$DATETIME.json"
+
+          # Сохраняем файл
+          mkdir -p results.jsons
+          echo "$CONTENT" > "results.jsons/$NEW_F
