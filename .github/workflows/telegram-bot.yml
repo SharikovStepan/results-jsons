@@ -19,6 +19,13 @@ jobs:
           # Устанавливаем инструменты
           sudo apt-get install -y jq curl
 
+echo "Полученные данные:"
+echo "FILE_ID: $FILE_ID"
+echo "FILE_NAME: $FILE_NAME"
+echo "CAPTION: $CAPTION"
+echo "Полный ответ getFile:"
+curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getFile?file_id=$FILE_ID" | jq
+
           # Извлекаем данные из события
           FILE_ID=$(echo "$EVENT_DATA" | jq -r '.message.document.file_id')
           FILE_NAME=$(echo "$EVENT_DATA" | jq -r '.message.document.file_name')
