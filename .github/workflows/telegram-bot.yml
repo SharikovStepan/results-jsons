@@ -58,7 +58,7 @@ jobs:
           fi
 
           # Формируем имя файла с обработанным caption
-          NEW_FILENAME="${PROCESSED_CAPTION}_${DATETIME}.json"
+          NEW_FILENAME="${DATETIME}_${PROCESSED_CAPTION}.json"
           
           # Сохраняем файл
           mkdir -p results.jsons
@@ -68,7 +68,6 @@ jobs:
           DISPLAY_DATE=$(echo "$DATETIME" | sed 's/_/ /')
           echo "MESSAGE<<EOF" >> $GITHUB_OUTPUT
           echo "✅ Файл успешно сохранён!" >> $GITHUB_OUTPUT
-          echo "Имя: $NEW_FILENAME" >> $GITHUB_OUTPUT
           echo "Дата: $DISPLAY_DATE" >> $GITHUB_OUTPUT
           echo "Источник даты: $DATETIME_SOURCE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
