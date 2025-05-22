@@ -31,10 +31,6 @@ jobs:
           FILE_PATH=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getFile?file_id=$FILE_ID" | jq -r '.result.file_path')
           curl -s -o "temp.json" "https://api.telegram.org/file/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/$FILE_PATH"
 
-          # Определяем источник даты
-          DATETIME_SOURCE="текущее время"
-          DATETIME=$(date +"%Y-%m-%d_%H-%M")  # Без секунд
-
           # Пытаемся извлечь дату из содержимого JSON
           JSON_DATETIME=$(jq -r '
             [.heats | to_entries[] | 
@@ -43,33 +39,35 @@ jobs:
             ] | first // "null"' "temp.json")
           
           if [ "$JSON_DATETIME" != "null" ]; then
-            # Форматируем дату без секунд и миллисекунд
+            # Извлекаем дату и время (часы:минуты)
             DATETIME=$(echo "$JSON_DATETIME" | 
-                      sed -E 's/([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}):[0-9]{2}(\.[0-9]+)?/\1_\2/' |
+                      sed -E 's/([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}):[0-9]{2}(\.[0-9]+)?.*/\1_\2/' |
                       sed 's/:/-/g')
             DATETIME_SOURCE="JSON файл"
           else
-            # Пробуем извлечь из имени файла (без секунд)
+            # Пробуем извлечь из имени файла
             if [[ "$ORIG_NAME" =~ RotorHazard_Export_([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2}) ]]; then
               DATETIME="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}-${BASH_REMATCH[3]}_${BASH_REMATCH[4]}-${BASH_REMATCH[5]}"
               DATETIME_SOURCE="имя файла"
+            else
+              DATETIME=$(date +"%Y-%m-%d_%H-%M")
+              DATETIME_SOURCE="текущее время"
             fi
           fi
 
-          # Гарантируем отсутствие секунд в имени файла
-          CLEAN_DATETIME=$(echo "$DATETIME" | sed -E 's/_[0-9]{2}(-[0-9]{2})?$//')
-          NEW_FILENAME="${CAPTION}_${CLEAN_DATETIME}.json"
+          # Формируем имя файла
+          NEW_FILENAME="${CAPTION}_${DATETIME}.json"
           
           # Сохраняем файл
           mkdir -p results.jsons
           mv "temp.json" "results.jsons/$NEW_FILENAME"
 
-          # Формируем сообщение для Telegram
-          DISPLAY_DATETIME=$(echo "$CLEAN_DATETIME" | sed 's/_/ /')
+          # Формируем сообщение
+          DISPLAY_DATE=$(echo "$DATETIME" | sed 's/_/ /')
           echo "MESSAGE<<EOF" >> $GITHUB_OUTPUT
           echo "✅ Файл успешно сохранён!" >> $GITHUB_OUTPUT
           echo "Имя: $NEW_FILENAME" >> $GITHUB_OUTPUT
-          echo "Дата: $DISPLAY_DATETIME" >> $GITHUB_OUTPUT
+          echo "Дата: $DISPLAY_DATE" >> $GITHUB_OUTPUT
           echo "Источник даты: $DATETIME_SOURCE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
